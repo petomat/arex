@@ -9,34 +9,34 @@ import de.petomat.util.collection._
 
 object Playground extends App {
 
-  val x = 40
-  println("=" * x)
-  println("*" * x)
-  println("=" * x)
+  locally {
+    val x = 100
+    println("=" * x)
+    println("*" * x)
+    println("=" * x)
+  }
 
   abstract class Rx[T](val name: String) {
     import Rx.Types._
-    @inline protected final def id: ID = hashCode
-    def idStr = Integer.toString(id, 36)
-    //    println(s"$name.id = $idStr")
-    protected final var dependentsPerID: ID |=> WeakReference[RX] = emptySortedMap
-    protected final def dependents: Iterable[RX] = {
-      dependentsPerID = dependentsPerID.filter { case id -> weakRef => weakRef.get.isDefined } // purge outdated weak references
-      dependentsPerID.values map (_.get.get)
-    }
+    @inline private[Playground] final def id: ID = hashCode
     protected final var lastDependencies: Set[RX] = Set()
-    protected final var value = initial
+    private[Playground] final var dependentsPerID: ID |=> WeakReference[RX] = emptySortedMap // weak reference because dependent can be nulled out // TODO use referenceQueue ?!
+    protected final def dependents: Iterable[RX] = { // TODO use referenceQueue ?!
+      dependentsPerID = dependentsPerID filter { case id -> weakRef => weakRef.get.isDefined } // purge outdated weak references
+      dependentsPerID.values collect { case wr if wr.get.isDefined => wr.get.get }
+    }
+    protected final var value = initial // must executed after lastDependencies else NPE
     final def now: T = value
     final def apply(): T = {
       Rx.Global.currentRxAndDeps.value = {
         Rx.Global.currentRxAndDeps.value map {
           case rx -> dependencies =>
-            // establish dependent
+            // establish caller as dependent of this callee 
             if (!dependentsPerID.contains(rx.id)) {
               println(s"establish dependency: ${name} ~~~> ${rx.name}")
               dependentsPerID += rx.id -> WeakReference(rx)
             }
-            // register sibling
+            // register sibling as dependency of caller
             rx -> (dependencies + this)
         }
       }
@@ -46,6 +46,25 @@ object Playground extends App {
     // to implement in subclass:
     protected def initial: T
     private[Playground] def refresh: Unit
+  }
+
+  class Dynamic[T](name: String)(calc: => T) extends Rx[T](name) {
+    import Rx.Types._
+    private def calcValue: T = {
+      val (value, dependenciesOfThis) = {
+        Rx.Global.currentRxAndDeps.withValue(Some(this -> emptySortedSet(Rx.rxOrdering))) { // memorize this as parent and no siblings yet for call to calc
+          (calc: T, Rx.Global.currentRxAndDeps.value.get._2: SortedSet[RX])
+        }
+      }
+      val dependencyIDsOfThis: Set[ID] = dependenciesOfThis.toSet[RX] map (_.id) // no sorted set needed, which is perhaps faster than building a sortedset
+      val removedDependencies = lastDependencies filterNot (dependencyIDsOfThis contains _.id) // lastDependencies -- dependenciesOfThis does not work!  
+      for (dep <- removedDependencies) { println(s"remove dependency ${dep.name}"); require(dep.dependentsPerID contains this.id); dep.dependentsPerID -= this.id } // TODO performance: remove require
+      //for (dep <- removedDependencies) dep.dependentsPerID -= this.id
+      lastDependencies = dependenciesOfThis
+      value
+    }
+    final def initial: T = calcValue
+    final def refresh: Unit = { println(s"refreshing $name : "); value = calcValue } // private[Playground] def refresh: Unit = value = calcValue
   }
 
   object Rx {
@@ -58,42 +77,36 @@ object Playground extends App {
     }
     import Types._
     object Global {
-      private[Rx] final val currentRxAndDeps = new DynamicVariable[Option[RX -> SortedSet[RX]]](None) // the current evaluating Rx and its (accumulated(while current Rx is evaluated)) dependencies 
+      private[Playground] final val currentRxAndDeps = new DynamicVariable[Option[RX -> SortedSet[RX]]](None) // the current evaluating Rx and its (accumulated(while current Rx is evaluated)) dependencies 
     }
-    implicit val rxOrd: Ordering[RX] = Ordering by (_.name) // implicit def rxOrd[X]: Ordering[Rx[X]] = Ordering.by(_.name)
+    // TODO performance idea: name will be hased continuously, so use: implicit class Name(name: String) extends EqualsAndHashCodeBy[String] { @inline final def equalsAndHashCodeBy = name }
+    implicit val rxOrdering: Ordering[RX] = Ordering by (_.name) // implicit def rxOrd[X]: Ordering[Rx[X]] = Ordering.by(_.name)
+    private final implicit class LevelPerRXPimp(val m1: LevelPerRX) extends AnyVal {
+      final def maxx(m2: LevelPerRX): LevelPerRX = m1 |^+^| m2
+    }
     private[Playground] def rxsPerLevel(rxs: Iterable[RX]): RXsPerLevel = { // println(Map("A" -> 1, "B" -> 2) |^+^| Map("B" -> 1, "C" -> 3)) // Map(A -> 1, B -> 2, C -> 3)
-      def levelMapForRx(lvl: Level)(rx: RX): LevelPerRX = Map(rx -> lvl) ++ (rx.dependents map levelMapForRx(lvl + 1) reduceOption (_ |^+^| _) getOrElse Map.empty)
-      val lpr: LevelPerRX = rxs map levelMapForRx(1: Level) reduceOption (_ |^+^| _) getOrElse Map.empty
+      def levelMapForRx(lvl: Level)(rx: RX): LevelPerRX = Map(rx -> lvl) ++ (rx.dependents map levelMapForRx(lvl + 1) reduceOption (_ maxx _) getOrElse Map.empty) // TODO tailrec?!
+      val lpr: LevelPerRX = rxs map levelMapForRx(1: Level) reduceOption (_ maxx _) getOrElse Map.empty
       lpr.groupBy(_._2: Level).mapValues(_.keys.toSortedSet).toSortedMap
     }
-    def apply[T](name: String)(calc: => T): Rx[T] = {
-      new Rx[T](name) {
-        private def calcValue: T = {
-          val (value, dependenciesOfThis) = {
-            Rx.Global.currentRxAndDeps.withValue(Some(this -> emptySortedSet(Rx.rxOrd))) { // memorize this as parent and no siblings yet for call to calc
-              (calc: T, Rx.Global.currentRxAndDeps.value.get._2: SortedSet[RX])
-            }
-          }
-          val dependencyIDsOfThis: Set[ID] = dependenciesOfThis.toSet[RX] map (_.id) // no sorted set needed, which is perhaps faster than building a sortedset
-          val removedDependencies = lastDependencies filterNot (dependencyIDsOfThis contains _.id) // lastDependencies -- dependenciesOfThis does not work!  
-          for (dep <- removedDependencies) { println(s"remove dependency ${dep.name}"); require(dep.dependentsPerID contains this.id); dep.dependentsPerID -= this.id } // TODO performance: remove require
-          //for (dep <- removedDependencies) dep.dependentsPerID -= this.id
-          lastDependencies = dependenciesOfThis
-          value
-        }
-        final def initial: T = calcValue
-        final def refresh: Unit = { println(s"refreshing $name : "); value = calcValue } // private[Playground] def refresh: Unit = value = calcValue
-      }
-    }
+    object Cookie
+    def apply[T](name: String, cookie: Cookie.type = Cookie)(calc: => T): Rx[T] = new Dynamic(name)(calc)
+    def apply[T](name: String)(calc: => T): Rx[T] = new Dynamic(name)(calc)
   }
 
   class Var[T](name: String, val initial: T) extends Rx[T](name) {
+    import Rx.Types._
     final def refresh = throw new IllegalStateException("only Rxs are refreshable, not Vars")
     final def :=(t: T) = {
       if (t != value) {
         println(s"setting $name to $t")
         value = t
-        for { (level, rxs) <- Rx.rxsPerLevel(dependents); rx <- rxs } rx.refresh // refresh depentends in proper order
+        // refresh depentends in proper order
+        val rxsPerLevel: RXsPerLevel = Rx.rxsPerLevel(dependents)
+        for {
+          (level, rxs) <- rxsPerLevel
+          rx <- rxs // TODO: this may be done in parallel because rxs with same level don't influence eachother
+        } rx.refresh
       }
     }
   }
@@ -103,6 +116,12 @@ object Playground extends App {
     def apply[T](name: String, cookie: Cookie.type = Cookie)(initial: T): Var[T] = new Var(name, initial)
     def apply[T](initial: T): Var[T] = new Var(name = "noname", initial)
   }
+
+  // TODO: level par processing, observers, |^+^| replacement, reference queue for weak references
+
+  // -------------------------------------------
+
+  // TODO test suite
 
   // -------------------------------------------
 
