@@ -16,7 +16,7 @@ object Playground extends App {
     println("=" * x)
   }
 
-  abstract class Rx[T](val name: String) {
+  abstract class Rx[T <: AnyRef](val name: String) {
     import Rx.Types._
     @inline private[Playground] final def id: ID = hashCode
     protected final var lastDependencies: Set[RX] = Set()
@@ -48,7 +48,7 @@ object Playground extends App {
     private[Playground] def refresh: Unit
   }
 
-  class Dynamic[T](name: String)(calc: => T) extends Rx[T](name) {
+  class Dynamic[T <: AnyRef](name: String)(calc: => T) extends Rx[T](name) {
     import Rx.Types._
     private def calcValue: T = {
       val (value, dependenciesOfThis) = {
@@ -69,7 +69,7 @@ object Playground extends App {
 
   object Rx {
     object Types {
-      type RX = Rx[_]
+      type RX = Rx[_ <: AnyRef]
       type ID = Int
       type Level = Int
       type LevelPerRX = RX |-> Level
@@ -90,11 +90,16 @@ object Playground extends App {
       lpr.groupBy(_._2: Level).mapValues(_.keys.toSortedSet).toSortedMap
     }
     object Cookie
-    def apply[T](name: String, cookie: Cookie.type = Cookie)(calc: => T): Rx[T] = new Dynamic(name)(calc)
-    def apply[T](name: String)(calc: => T): Rx[T] = new Dynamic(name)(calc)
+    class PartialAppliedRx(val name: String) extends AnyVal {
+      def apply[T <: AnyRef](calc: => T): Rx[T] = new Dynamic(name)(calc)
+      def apply[T <: AnyVal, AR <: AnyRef](calc: => T)(implicit conversion: T => AR): Rx[AR] = new Dynamic(name)(conversion(calc))
+    }
+    def apply(name: String, cookie: Cookie.type = Cookie) = new PartialAppliedRx(name)
+    def apply[T <: AnyRef](calc: => T): Rx[T] = new Dynamic(name = "noname")(calc)
+    def apply[T <: AnyVal, AR <: AnyRef](calc: => T)(implicit conversion: T => AR): Rx[AR] = new Dynamic(name = "noname")(conversion(calc))
   }
 
-  class Var[T](name: String, val initial: T) extends Rx[T](name) {
+  class Var[T <: AnyRef](name: String, val initial: T) extends Rx[T](name) {
     import Rx.Types._
     final def refresh = throw new IllegalStateException("only Rxs are refreshable, not Vars")
     final def :=(t: T) = {
@@ -113,8 +118,13 @@ object Playground extends App {
 
   object Var {
     object Cookie
-    def apply[T](name: String, cookie: Cookie.type = Cookie)(initial: T): Var[T] = new Var(name, initial)
-    def apply[T](initial: T): Var[T] = new Var(name = "noname", initial)
+    class PartialAppliedVar(val name: String) extends AnyVal {
+      def apply[T <: AnyRef](initial: T): Var[T] = new Var(name, initial)
+      def apply[T <: AnyVal, AR <: AnyRef](initial: T)(implicit conversion: T => AR): Var[AR] = new Var(name, conversion(initial))
+    }
+    def apply(name: String, cookie: Cookie.type = Cookie) = new PartialAppliedVar(name)
+    def apply[T <: AnyRef](initial: T): Var[T] = new Var(name = "noname", initial)
+    def apply[T <: AnyVal, AR <: AnyRef](initial: T)(implicit conversion: T => AR): Var[AR] = new Var(name = "noname", conversion(initial))
   }
 
   // TODO: level par processing, observers, |^+^| replacement, reference queue for weak references
@@ -141,8 +151,8 @@ object Playground extends App {
   locally {
     val seq = Seq.tabulate(9)(nr => Var(name = "vr" + (nr + 1))(nr + 1))
     val nr = Var(name = "nr")(3)
-    val rxs = Rx("rxs") { seq take nr() }
-    val sum = Rx("sum") {
+    val rxs = Rx(name = "rxs") { seq take nr() }
+    val sum = Rx(name = "sum") {
       rxs().foldLeft(0)(_ + _())
     }
     println(sum.now)
