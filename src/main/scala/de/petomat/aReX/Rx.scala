@@ -19,10 +19,7 @@ abstract class Rx[T](val name: String) extends Rx.HasID {
     Rx.Global.currentDynamicAndDeps.value = {
       Rx.Global.currentDynamicAndDeps.value map {
         case (dyn, dependencies) =>
-          if (!dependents.perID.contains(dyn.id)) {
-            println(s"establish dependency: ${name} ~~~> ${dyn.name}")
-            dependents + dyn // establish caller as dependent of this callee
-          }
+          if (!dependents.perID.contains(dyn.id)) dependents + dyn // establish caller as dependent of this callee
           dyn -> (dependencies + this) // register sibling as dependency of caller
       }
     }
@@ -95,7 +92,7 @@ object Rx {
     final val currentDynamicAndDeps = new DynamicVariable[Option[DYN -> SortedSet[RX]]](None) // the current evaluating Rx(Dynamic) and its (accumulated(while current Rx is evaluated)) dependencies 
   }
   private[aReX] trait HasID {
-    @inline private[aReX] final def id: ID = hashCode
+    private[aReX] final def id: ID = hashCode
   }
   private[aReX] class WeakReferenceWithID[T <: AnyRef](value: T, queue: ReferenceQueue[T], val id: ID) extends WeakReference[T](value, queue)
   private[aReX] trait WeakStructure[X <: AnyRef with HasID] {
@@ -121,10 +118,8 @@ object Rx {
     val dynPerLevel: DYN |-> Level = rxs map levelMapForRx(1: Level) reduceOption (_ maxx _) getOrElse Map.empty
     dynPerLevel.groupBy(_._2: Level).mapValues(_.keys.toSortedSet).toSortedMap
   }
-  // TODO performance idea: name will be hased continuously, so use: implicit class Name(val name: String) extends EqualsAndHashCodeBy[String] { @inline final def equalsAndHashCodeBy = name }
-  // TODO performance vs current debug mode: implicit def rxOrd[X <: RX]: Ordering[X] = Ordering by (_.id) 
-  implicit def rxOrd[X <: RX]: Ordering[X] = Ordering by (_.name) // TODO performance: Perhaps its faster to have "implicit val rxOrdering: Ordering[RX]" and "implicit val dynOrdering: Ordering[DYN]"
-  private[aReX] val noname = "noname"
+  implicit def rxOrd[X <: RX]: Ordering[X] = Ordering by (_.id) // TODO performance: Perhaps its faster to have "implicit val rxOrdering: Ordering[RX]" and "implicit val dynOrdering: Ordering[DYN]"
+  private[aReX] def noname = "noname"
   object Cookie
   def apply[T](name: String, cookie: Cookie.type = Cookie)(calc: => T) = new Dynamic(name)(calc)
   def apply[T](calc: => T): Rx[T] = new Dynamic(name = noname)(calc)

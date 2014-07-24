@@ -12,12 +12,11 @@ class Dynamic[T](name: String)(calc: => T) extends Rx[T](name) {
     }
     val dependencyIDsOfThis: Set[ID] = dependenciesOfThis.toSet[RX] map (_.id) // no sorted set needed, which is probably faster than building a sortedset
     val removedDependencies = dependencies filterNot (dependencyIDsOfThis contains _.id) // dependencies -- dependenciesOfThis does not work!  
-    for (dep <- removedDependencies) { println(s"remove dependency ${dep.name}"); require(dep.dependents.perID contains this.id); dep.dependents.perID -= this.id } // TODO performance: remove require
-    //for (dep <- removedDependencies) dep.dependents.perID -= this.id
+    for (dep <- removedDependencies) dep.dependents.perID -= this.id
     dependencies = dependenciesOfThis
     value
   }
-  final def refresh: Unit = { print(s"refreshing $name from $value to "); value = calcValue; println(value) } // private[Playground] def refresh: Unit = value = calcValue
+  private[aReX] final def refresh: Unit = value = calcValue
   override protected final def initial: T = calcValue
   override protected final def enableHook: Unit = { refresh; propagate }
 }

@@ -18,27 +18,67 @@ object Playground extends App {
     println("=" * x)
   }
 
+  implicit class RxPimp[T](val rx: Rx[T]) {
+    def foreachPrintln: Observer[T] = rx foreach { t => println(s"${rx.name} = $t") }
+  }
+  def foreachPrintln(rxs: Rx[_]*): Seq[Observer[_]] = rxs.map(_.foreachPrintln)
+
+  final def microBench[T](name: String)(t: => T): T = {
+    val start = System.nanoTime
+    val res = t
+    val end = System.nanoTime
+    val diff = (end - start).abs / 1000D / 1000D
+    println(f"$diff%6.3fms " + name)
+    res
+  }
+
   // -------------------------------------------
 
   // TODO: level par processing, test suite, purge debugs
 
   // -------------------------------------------
 
+  //  locally {
+  //    val vr1 = Var(name = "vr1")(0)
+  //    val rx1 = Rx(name = "rx1") { vr1() * 3 }
+  //    val rx2 = Rx(name = "rx2") { rx1() + 1 }
+  //    val rx3 = Rx(name = "rx3") { rx1() - 1 }
+  //    val rx4 = Rx(name = "rx4") { rx2() + rx3() }
+  //    val obses = foreachPrintln(vr1, rx1, rx2, rx3, rx4)
+  //    println("inited.")
+  //    vr1 := 1
+  //    println("disable rx2")
+  //    rx2.disable
+  //    vr1 := 2
+  //    vr1 := 3
+  //    println("enable  rx2")
+  //    rx2.enable
+  //    vr1 := 4
+  //  }
+
   locally {
-    val vr1 = Var(name = "vr1")(0)
-    val rx1 = Rx(name = "rx1") { vr1() * 3 }
-    val rx2 = Rx(name = "rx2") { rx1() + 1 }
-    val rx3 = Rx(name = "rx3") { rx1() - 1 }
-    val rx4 = Rx(name = "rx4") { rx2() + rx3() }
-    vr1 := 1
-    println("disable")
-    rx2.disable
-    vr1 := 2
-    vr1 := 3
-    println("enable")
-    rx2.enable
-    vr1 := 4
+    val n = 1000
+    // val vars = Vector.fill(n)(Var(0))
+    val vars = Vector.tabulate(n)(Var(_))
+    val rx = Rx(name = "SUM") {
+      microBench("applys") { vars.foreach(_()) }
+      microBench("summing") { vars.view.map(_.now).sum }
+    }
+    val obs = rx.foreachPrintln
+    microBench("total") {
+      0 until n foreach { i => vars(i) := i + 1 }
+    }
   }
+
+  //  locally {
+  //    val v1 = Var(name = "vr1")(0)
+  //    val v2 = Var(name = "vr2")(0)
+  //    val obses = foreachPrintln(v1, v2)
+  //    val obs1 = v1 foreach v2.refresh
+  //    val obs2 = v2 foreach v1.refresh
+  //    v1 := 1
+  //    v2 := 2
+  //  }
 
   //  locally {
   //    val vr1 = Var(name = "vr1")(5)
