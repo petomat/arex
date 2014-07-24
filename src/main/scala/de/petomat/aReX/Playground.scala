@@ -27,23 +27,43 @@ object Playground extends App {
 
   // -------------------------------------------
 
-  //    locally {
-  //      val vr1 = Var(name = "vr1")(0)
-  //      val rx1 = Rx(name = "rx1") { vr1() * 3 }
-  //      val rx2 = Rx(name = "rx2") { rx1() + 1 }
-  //      val rx3 = Rx(name = "rx3") { rx1() - 1 }
-  //      val rx4 = Rx(name = "rx4") { rx2() + rx3() }
-  //      val obses = foreachPrintln(vr1, rx1, rx2, rx3, rx4)
-  //      println("inited.")
-  //      vr1 := 1
-  //      println("disable rx2")
-  //      rx2.disable
-  //      vr1 := 2
-  //      vr1 := 3
-  //      println("enable  rx2")
-  //      rx2.enable
-  //      vr1 := 4
-  //    }
+  locally {
+    import scala.concurrent.Future
+    import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.Await
+    import scala.concurrent.duration.Duration
+
+    val rx = Rx { Future { 42 } }
+
+    //prcintln(Await.result(fut, Duration.Inf))
+  }
+
+  //  locally {
+  //    val set = Var(Set.empty[Int])
+  //    val diff = lastSetChangeRx(set)
+  //    diff.name = "diff"
+  //    foreachPrintln(set, diff)
+  //    set :+= 1
+  //    set :+= 2
+  //  }
+
+  //  locally {
+  //    val vr1 = Var(name = "vr1")(0)
+  //    val rx1 = Rx(name = "rx1") { vr1() * 3 }
+  //    val rx2 = Rx(name = "rx2") { rx1() + 1 }
+  //    val rx3 = Rx(name = "rx3") { rx1() - 1 }
+  //    val rx4 = Rx(name = "rx4") { rx2() + rx3() }
+  //    val obses = foreachPrintln(vr1, rx1, rx2, rx3, rx4)
+  //    println("inited.")
+  //    vr1 := 1
+  //    println("disable rx2")
+  //    rx2.disable
+  //    vr1 := 2
+  //    vr1 := 3
+  //    println("enable  rx2")
+  //    rx2.enable
+  //    vr1 := 4
+  //  }
 
   //  locally {
   //    val n = 1000

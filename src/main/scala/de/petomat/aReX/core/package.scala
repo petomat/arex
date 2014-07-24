@@ -5,7 +5,7 @@ import scala.collection.immutable.SortedSet
 import scala.collection.immutable.TreeSet
 import scala.collection.immutable.TreeMap
 
-object Util { // don't want to pollute package object with definitions from here, because user imports this package, but we need (nested) objects for value classes // and also stay third party library dependency free 
+package object core {
 
   type ->[X, Y] = (X, Y)
   type |->[K, V] = Map[K, V]
@@ -38,4 +38,3 @@ object Util { // don't want to pollute package object with definitions from here
   }
 
 }
-

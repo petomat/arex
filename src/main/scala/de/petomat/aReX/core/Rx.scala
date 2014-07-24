@@ -1,4 +1,4 @@
-package de.petomat.aReX
+package de.petomat.aReX.core
 import scala.annotation.tailrec
 import scala.ref.WeakReference
 import scala.ref.ReferenceQueue
@@ -8,7 +8,6 @@ import scala.collection.immutable.SortedSet
 
 abstract class Rx[T]( final var name: String) extends Rx.HasID {
   import Rx.Types._
-  import Util._
   type Obs = Observer[T]
   private[aReX] final var isEnabled = true
   private[aReX] final var dependencies: Set[RX] = Set.empty // track dependencies to make removal of e.g. this as a dependent of a dependency of this possible
@@ -77,14 +76,13 @@ abstract class Rx[T]( final var name: String) extends Rx.HasID {
   final def foreach(pf: PartialFunction[T, Unit]): Obs = this foreach { pf lift _ }
   final def foreachSkippedInitial(pf: PartialFunction[T, Unit]): Obs = this foreachSkipInitial (pf lift _)
   // to implement in subclass:
-  protected def enableHook: Unit = {}
+  protected def enableHook: Unit
   protected def initial: T
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------
 
 object Rx {
-  import Util._
   object Types {
     type RX = Rx[_]
     type DYN = Dynamic[_]

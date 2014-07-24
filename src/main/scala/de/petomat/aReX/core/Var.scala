@@ -1,5 +1,4 @@
-package de.petomat.aReX
-import de.petomat.aReX.Var.Cookie
+package de.petomat.aReX.core
 
 object Var {
   object Cookie
@@ -22,7 +21,7 @@ class Var[T](name: String = Rx.noname, override final val initial: T) extends Rx
       }
     } else stash = Some(t)
   }
-  @inline final def refresh(t: T): Unit = :=(t) // to use it as a function parameter: val obs = rx foreach vr.refresh
+  @inline final def refresh(t: T): Unit = :=(t) // to use it as a function parameter, e.g.: val obs = rx foreach vr.refresh
   override protected final def enableHook: Unit = { stash foreach refresh; stash = None }
 }
 

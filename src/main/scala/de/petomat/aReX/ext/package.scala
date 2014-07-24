@@ -3,9 +3,9 @@ import scala.language.higherKinds
 import scala.collection.breakOut
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.TreeMap
+import de.petomat.aReX.core._
 
 package object ext {
-  import de.petomat.aReX.Util._
 
   private[ext] def ensure(b: Boolean) = require(b)
 
@@ -36,6 +36,9 @@ package object ext {
     }
   }
 
+  implicit class VarSetPimp[T](val ___vari: Var[Set[T]]) extends AnyVal {
+    @inline def :+=(t: T): Unit = ___vari := ___vari.now + t
+  }
   implicit class VarMapPimp[K, V](val ___vari: Var[K |-> V]) extends AnyVal {
     @inline def :+=(t: (K, V)): Unit = ___vari := ___vari.now + t
   }
