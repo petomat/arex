@@ -1,13 +1,5 @@
 package de.petomat.aReX
-import scala.annotation.tailrec
-import scala.ref.WeakReference
-import scala.ref.ReferenceQueue
-import scala.util.DynamicVariable
-import scala.collection.IterableView
-import scala.collection.immutable.SortedMap
-import scala.collection.immutable.SortedSet
-import scala.collection.immutable.TreeSet
-import scala.collection.immutable.TreeMap
+import de.petomat.aReX.ext._
 
 object Playground extends App {
 
@@ -18,9 +10,6 @@ object Playground extends App {
     println("=" * x)
   }
 
-  implicit class RxPimp[T](val rx: Rx[T]) {
-    def foreachPrintln: Observer[T] = rx foreach { t => println(s"${rx.name} = $t") }
-  }
   def foreachPrintln(rxs: Rx[_]*): Seq[Observer[_]] = rxs.map(_.foreachPrintln)
 
   final def microBench[T](name: String)(t: => T): T = {
@@ -34,41 +23,55 @@ object Playground extends App {
 
   // -------------------------------------------
 
-  // TODO: level par processing, test suite, purge debugs
+  // TODO: level par processing, test suite
 
   // -------------------------------------------
 
+  //    locally {
+  //      val vr1 = Var(name = "vr1")(0)
+  //      val rx1 = Rx(name = "rx1") { vr1() * 3 }
+  //      val rx2 = Rx(name = "rx2") { rx1() + 1 }
+  //      val rx3 = Rx(name = "rx3") { rx1() - 1 }
+  //      val rx4 = Rx(name = "rx4") { rx2() + rx3() }
+  //      val obses = foreachPrintln(vr1, rx1, rx2, rx3, rx4)
+  //      println("inited.")
+  //      vr1 := 1
+  //      println("disable rx2")
+  //      rx2.disable
+  //      vr1 := 2
+  //      vr1 := 3
+  //      println("enable  rx2")
+  //      rx2.enable
+  //      vr1 := 4
+  //    }
+
   //  locally {
-  //    val vr1 = Var(name = "vr1")(0)
-  //    val rx1 = Rx(name = "rx1") { vr1() * 3 }
-  //    val rx2 = Rx(name = "rx2") { rx1() + 1 }
-  //    val rx3 = Rx(name = "rx3") { rx1() - 1 }
-  //    val rx4 = Rx(name = "rx4") { rx2() + rx3() }
-  //    val obses = foreachPrintln(vr1, rx1, rx2, rx3, rx4)
-  //    println("inited.")
-  //    vr1 := 1
-  //    println("disable rx2")
-  //    rx2.disable
-  //    vr1 := 2
-  //    vr1 := 3
-  //    println("enable  rx2")
-  //    rx2.enable
-  //    vr1 := 4
+  //    val n = 1000
+  //    // val vars = Vector.fill(n)(Var(0))
+  //    val vars = Vector.tabulate(n)(Var(_))
+  //    val rx = Rx(name = "SUM") {
+  //      microBench("applys") { vars.foreach(_()) }
+  //      microBench("summing") { vars.view.map(_.now).sum }
+  //    }
+  //    val obs = rx.foreachPrintln
+  //    microBench("total") {
+  //      0 until n foreach { i => vars(i) := i + 1 }
+  //    }
   //  }
 
-  locally {
-    val n = 1000
-    // val vars = Vector.fill(n)(Var(0))
-    val vars = Vector.tabulate(n)(Var(_))
-    val rx = Rx(name = "SUM") {
-      microBench("applys") { vars.foreach(_()) }
-      microBench("summing") { vars.view.map(_.now).sum }
-    }
-    val obs = rx.foreachPrintln
-    microBench("total") {
-      0 until n foreach { i => vars(i) := i + 1 }
-    }
-  }
+  //  locally {
+  //    val vr1 = Var(name = "vr1")(0)
+  //    val rx1 = Rx { vr1() }
+  //    val vr2 = Var(rx1)
+  //    rx1.name = "rx1"
+  //    vr2.name = "vr2"
+  //    foreachPrintln(vr1, vr2, rx1)
+  //    println("go:")
+  //    vr1.disable
+  //    vr1 := 8
+  //    vr2 := 9
+  //    vr1.enable
+  //  }
 
   //  locally {
   //    val v1 = Var(name = "vr1")(0)
@@ -125,38 +128,38 @@ object Playground extends App {
   //    println(sum.now)
   //  }
 
+  //  locally {
+  //    var vr1 = Var(name = "vr1")(3)
+  //    var vr2 = Var(name = "vr2")(true)
+  //    var vr3 = Var(name = "vr3")(5)
+  //    var rx1 = Rx(name = "rx1") { if (vr2()) vr1() else vr3() }
+  //    var rx2 = Rx(name = "rx2") { rx1() * 2 }
+  //    var rx3 = Rx(name = "rx3") { rx1() * 3 }
+  //    var rx4 = Rx(name = "rx4") { rx1() * 10 }
+  //    var rx5 = Rx(name = "rx5") { rx3() + 1 }
+  //    var rx6 = Rx(name = "rx6") { rx5() + 1 }
+  //    var rx7 = Rx(name = "rx7") { rx2() + rx4() + rx6() }
+  //
+  //    def now(rx: Rx.Types.RX): String = Option(rx) map (_.now.toString) getOrElse "N/A"
+  //    def printAll = println(Seq(now(vr1), now(vr2), now(vr3), "|", now(rx1), "|", now(rx2), now(rx3), now(rx4), "|", now(rx5), "|", now(rx6), "|", now(rx7)).mkString("  "))
+  ////    def showGraph(vars: Rx.Types.RX*) = for ((level, rxs) <- Rx.dynamicsPerLevel(vars)) println(level + " : " + rxs.map(_.name).mkStr)
+  //
+  ////    showGraph(vr1, vr2, vr3)
+  //
+  //    printAll
+  //    vr2 := true
+  //    printAll
+  //    vr1 := 1000
+  //    printAll
   //    locally {
-  //      var vr1 = Var(name = "vr1")(3)
-  //      var vr2 = Var(name = "vr2")(true)
-  //      var vr3 = Var(name = "vr3")(5)
-  //      var rx1 = Rx(name = "rx1") { if (vr2()) vr1() else vr3() }
-  //      var rx2 = Rx(name = "rx2") { rx1() * 2 }
-  //      var rx3 = Rx(name = "rx3") { rx1() * 3 }
-  //      var rx4 = Rx(name = "rx4") { rx1() * 10 }
-  //      var rx5 = Rx(name = "rx5") { rx3() + 1 }
-  //      var rx6 = Rx(name = "rx6") { rx5() + 1 }
-  //      var rx7 = Rx(name = "rx7") { rx2() + rx4() + rx6() }
-  //  
-  //      def now(rx: Rx.Types.RX): String = Option(rx) map (_.now.toString) getOrElse "N/A"
-  //      def printAll = println(Seq(now(vr1), now(vr2), now(vr3), "|", now(rx1), "|", now(rx2), now(rx3), now(rx4), "|", now(rx5), "|", now(rx6), "|", now(rx7)).mkStr)
-  //      def showGraph(vars: Rx.Types.RX*) = for ((level, rxs) <- Rx.rxsPerLevel(vars)) println(level + " : " + rxs.map(_.name).mkStr)
-  //  
-  //      showGraph(vr1, vr2, vr3)
-  //  
-  //      printAll
-  //      vr2 := true
-  //      printAll
-  //      vr1 := 1000
-  //      printAll
-  //      locally {
-  //        rx7 = null
-  //        rx2 = null
-  //        System.gc
-  //        printAll
-  //      }
-  //      vr1 := 10000
+  //      rx7 = null
+  //      rx2 = null
+  //      System.gc
   //      printAll
   //    }
+  //    vr1 := 10000
+  //    printAll
+  //  }
 
 }
 

@@ -6,13 +6,14 @@ import scala.util.DynamicVariable
 import scala.collection.IterableView
 import scala.collection.immutable.SortedSet
 
-abstract class Rx[T](val name: String) extends Rx.HasID {
+abstract class Rx[T]( final var name: String) extends Rx.HasID {
   import Rx.Types._
   import Util._
+  type Obs = Observer[T]
   private[aReX] final var isEnabled = true
   private[aReX] final var dependencies: Set[RX] = Set.empty // track dependencies to make removal of e.g. this as a dependent of a dependency of this possible
   private[aReX] object dependents extends Rx.WeakStructure[DYN] // having weak forward references to dependents but strong backward to dependencies
-  private[aReX] object observers extends Rx.WeakStructure[Observer[T]]
+  private[aReX] object observers extends Rx.WeakStructure[Obs]
   protected final var value = initial // must be executed after dependencies otherwise NPE
   final def now: T = value
   final def apply(): T = {
@@ -25,12 +26,13 @@ abstract class Rx[T](val name: String) extends Rx.HasID {
     }
     value
   }
-  final def foreach(f: T => Unit): Observer[T] = {
+  final def name_(s: String): Unit = {}
+  final def foreach(f: T => Unit): Obs = {
     val obs = foreachSkipInitial(f)
     obs(this.now)
     obs
   }
-  final def foreachSkipInitial(f: T => Unit): Observer[T] = {
+  final def foreachSkipInitial(f: T => Unit): Obs = {
     val obs = new Observer(f)
     observers + obs
     obs
@@ -43,7 +45,6 @@ abstract class Rx[T](val name: String) extends Rx.HasID {
   final override def toString = s"$name[${dependencies.map(_.name).mkString(",")}|${dependents.asView.map(_.name).mkString(",")}]"
   protected final def propagate: Unit = {
     // assumes that this rx was already refreshed, either by Var.:=(...) or Dynamic.refresh
-    val dynsPerLevel: Level |=> SortedSet[DYN] = Rx.dynamicsPerLevel(dependents.asView)
     // refresh all depentends in proper order, thats why SortedSet[DYN] is used
     @tailrec def refreshing(rxsPerLevel: Level |=> SortedSet[DYN], refreshed: Set[ID]): Set[ID] = { // memorize refreshed ones to determine which follow ups have to be refresh
       if (rxsPerLevel.isEmpty) refreshed
@@ -54,13 +55,14 @@ abstract class Rx[T](val name: String) extends Rx.HasID {
             dyn <- dyns // TODO: this may be done in parallel because rxs with same level don't influence eachother 
             if dyn.isEnabled && (dyn.dependencies.view map (_.id) exists refreshed) // rule: a rx must be refreshed if it is enabled and if at least one dependency was refreshed. i.e. specifically if all dependencies weren't refreshed and the current rx is enabled though, it will not be refreshed.
           } yield {
-            dyn.refresh
+            dyn.refreshValue
             dyn.id
           }
         }
         refreshing(rxsPerLevel.tail, refreshed ++ newlyRefreshed)
       }
     }
+    val dynsPerLevel: Level |=> SortedSet[DYN] = Rx.dynamicsPerLevel(dependents.asView)
     val refreshed: Set[ID] = refreshing(dynsPerLevel, Set(this.id))
     // after refreshing RXs, execute all own observers and observers of dependents of this
     for (obs <- observers.asView) obs(this.now)
@@ -72,6 +74,8 @@ abstract class Rx[T](val name: String) extends Rx.HasID {
     } obs(dyn.now)
 
   }
+  final def foreach(pf: PartialFunction[T, Unit]): Obs = this foreach { pf lift _ }
+  final def foreachSkippedInitial(pf: PartialFunction[T, Unit]): Obs = this foreachSkipInitial (pf lift _)
   // to implement in subclass:
   protected def enableHook: Unit = {}
   protected def initial: T
