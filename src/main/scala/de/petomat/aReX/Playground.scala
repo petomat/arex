@@ -20,27 +20,43 @@ object Playground extends App {
 
   // -------------------------------------------
 
-  // TODO: level par processing, test suite, enablabled rxs, rename to aReX
+  // TODO: level par processing, test suite, purge debugs
 
   // -------------------------------------------
 
   locally {
-    val vr1 = Var(name = "vr1")(5)
-    var obs1 = vr1 foreachSkipInitial { x => println(s"vr1 = $x") }
-    val rx1 = Rx(name = "rx1") { vr1() * 2 }
-    val rx2 = Rx(name = "rx2") { vr1() + 1 }
-    var obs2 = rx2 foreachSkipInitial { x => println(s"rx2 = $x") }
-    println("rx2.observers.asView.size=" + rx2.observers.asView.size)
-    vr1 := 3
-    vr1 := 8
-    obs2 = null
-    System.gc
+    val vr1 = Var(name = "vr1")(0)
+    val rx1 = Rx(name = "rx1") { vr1() * 3 }
+    val rx2 = Rx(name = "rx2") { rx1() + 1 }
+    val rx3 = Rx(name = "rx3") { rx1() - 1 }
+    val rx4 = Rx(name = "rx4") { rx2() + rx3() }
     vr1 := 1
+    println("disable")
+    rx2.disable
     vr1 := 2
-    println("rx2.observers.perID.size=" + rx2.observers.perID.size)
-    println("rx2.observers.asView.size=" + rx2.observers.asView.size)
-    println("rx2.observers.perID.size=" + rx2.observers.perID.size)
+    vr1 := 3
+    println("enable")
+    rx2.enable
+    vr1 := 4
   }
+
+  //  locally {
+  //    val vr1 = Var(name = "vr1")(5)
+  //    var obs1 = vr1 foreachSkipInitial { x => println(s"vr1 = $x") }
+  //    val rx1 = Rx(name = "rx1") { vr1() * 2 }
+  //    val rx2 = Rx(name = "rx2") { vr1() + 1 }
+  //    var obs2 = rx2 foreachSkipInitial { x => println(s"rx2 = $x") }
+  //    println("rx2.observers.asView.size=" + rx2.observers.asView.size)
+  //    vr1 := 3
+  //    vr1 := 8
+  //    obs2 = null
+  //    System.gc
+  //    vr1 := 1
+  //    vr1 := 2
+  //    println("rx2.observers.perID.size=" + rx2.observers.perID.size)
+  //    println("rx2.observers.asView.size=" + rx2.observers.asView.size)
+  //    println("rx2.observers.perID.size=" + rx2.observers.perID.size)
+  //  }
 
   //  locally {
   //    val nr = Var(name = "nr")(3)

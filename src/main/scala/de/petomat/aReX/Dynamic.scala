@@ -2,7 +2,7 @@ package de.petomat.aReX
 import scala.collection.immutable.SortedSet
 
 class Dynamic[T](name: String)(calc: => T) extends Rx[T](name) {
-  import Rx.Util._
+  import Util._
   import Rx.Types._
   private def calcValue: T = {
     val (value, dependenciesOfThis) = {
@@ -17,6 +17,7 @@ class Dynamic[T](name: String)(calc: => T) extends Rx[T](name) {
     dependencies = dependenciesOfThis
     value
   }
-  final def refresh: Unit = { println(s"refreshing $name : "); value = calcValue } // private[Playground] def refresh: Unit = value = calcValue
-  override final def initial: T = calcValue
+  final def refresh: Unit = { print(s"refreshing $name from $value to "); value = calcValue; println(value) } // private[Playground] def refresh: Unit = value = calcValue
+  override protected final def initial: T = calcValue
+  override protected final def enableHook: Unit = { refresh; propagate }
 }

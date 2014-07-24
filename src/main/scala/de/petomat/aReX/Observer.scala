@@ -1,7 +1,6 @@
 package de.petomat.aReX
 
-class Observer[T](val f: T => Unit) extends (T => Unit) with Rx.HasID {
-  type T0 = T // to be able to access the type parameter from outside, which is not possible with type parameters instead of type members
-  @inline def apply(t: T): Unit = f(t)
+class Observer[T](val f: T => Unit) extends (Any => Unit) with Rx.HasID { // Any because we don't use HLists for collections of Rx[T], which would be a performance penalty
+  @inline def apply(a: Any): Unit = f(a.asInstanceOf[T])
 }
 
