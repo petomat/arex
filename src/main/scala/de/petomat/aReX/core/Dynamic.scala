@@ -11,11 +11,14 @@ class Dynamic[T](name: String = Rx.noname)(calc: => T) extends Rx[T](name) {
     }
     val dependencyIDsOfThis: Set[ID] = dependenciesOfThis.toSet[RX] map (_.id) // no sorted set needed, which is probably faster than building a sortedset
     val removedDependencies = dependencies filterNot (dependencyIDsOfThis contains _.id) // dependencies -- dependenciesOfThis does not work!  
-    for (dep <- removedDependencies) dep.dependents.perID -= this.id
+    for (dep <- removedDependencies) dep.dependents - this
     dependencies = dependenciesOfThis
     value
   }
   private[aReX] final def refreshValue: Unit = value = calcValue
   override protected final def initial: T = calcValue
-  override protected final def enableHook: Unit = { refreshValue; propagate }
+  override protected def enableRefreshingValueHook: Unit = {
+    refreshValue
+    if (isPropagating) propagate
+  }
 }

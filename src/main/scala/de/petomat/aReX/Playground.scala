@@ -29,14 +29,30 @@ object Playground extends App {
 
   locally {
     val vr = Var(name = "vr")(0)
-    val rx1 = Rx(name = "rx1") { println("RX1"); vr() < 10 }
-    val rx2 = Rx(name = "rx2") { println("RX2"); rx1().toString }
-    foreachPrintln(vr, rx1, rx2)
-    println("set vr := 8")
-    vr := 8 // rx2 wird unnötig aktualisiert
+    val rx1 = Rx(name = "rx1") { println("refreshing value RX1"); vr() < 10 }
+    val rx2 = Rx(name = "rx2") { println("refreshing value RX2"); s"'${rx1()}'" }
+    val rx3 = Rx(name = "rx3") { println("refreshing value RX3"); !rx1() }
+    foreachPrintln(vr, rx1, rx2,rx3)
+    def set(i: Int) {
+      println(s"SETTING vr := $i")
+      vr := i
+    }
+    set(88)
+    rx1.disablePropagating
+//    rx1.disableRefreshingValue
+    set(3)
   }
 
   
+  //  locally {
+  //    val vr = Var(name = "vr")(0)
+  //    val rx1 = Rx(name = "rx1") { println("RX1"); vr() < 10 }
+  //    val rx2 = Rx(name = "rx2") { println("RX2"); rx1().toString }
+  //    foreachPrintln(vr, rx1, rx2)
+  //    println("set vr := 8")
+  //    vr := 8 // rx2 wird unnötig aktualisiert
+  //  }
+
   //  locally {
   //    import scala.concurrent.Future
   //    import scala.concurrent.ExecutionContext.Implicits.global

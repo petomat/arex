@@ -14,14 +14,20 @@ object Var {
 class Var[T](name: String = Rx.noname, override final val initial: T) extends Rx[T](name) {
   private final var stash: Option[T] = None
   final def :=(t: T): Unit = {
-    if (isEnabled) {
+    if (isRefreshingValue) {
       if (t != value) {
         value = t
-        propagate
+        if (isPropagating) propagate
       }
-    } else stash = Some(t)
+    } else {
+      stash = Some(t)
+    }
   }
   @inline final def refresh(t: T): Unit = :=(t) // to use it as a function parameter, e.g.: val obs = rx foreach vr.refresh
-  override protected final def enableHook: Unit = { stash foreach refresh; stash = None }
+  override protected def enableRefreshingValueHook: Unit = {
+    stash foreach refresh
+    stash = None
+    if (isPropagating) propagate
+  }
 }
 
