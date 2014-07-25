@@ -28,15 +28,25 @@ object Playground extends App {
   // -------------------------------------------
 
   locally {
-    import scala.concurrent.Future
-    import scala.concurrent.ExecutionContext.Implicits.global
-    import scala.concurrent.Await
-    import scala.concurrent.duration.Duration
-
-    val rx = Rx { Future { 42 } }
-
-    //prcintln(Await.result(fut, Duration.Inf))
+    val vr = Var(name = "vr")(0)
+    val rx1 = Rx(name = "rx1") { println("RX1"); vr() < 10 }
+    val rx2 = Rx(name = "rx2") { println("RX2"); rx1().toString }
+    foreachPrintln(vr, rx1, rx2)
+    println("set vr := 8")
+    vr := 8 // rx2 wird unnötig aktualisiert
   }
+
+  
+  //  locally {
+  //    import scala.concurrent.Future
+  //    import scala.concurrent.ExecutionContext.Implicits.global
+  //    import scala.concurrent.Await
+  //    import scala.concurrent.duration.Duration
+  //
+  //    val rx = Rx { Future { 42 } }
+  //
+  //    //prcintln(Await.result(fut, Duration.Inf))
+  //  }
 
   //  locally {
   //    val set = Var(Set.empty[Int])

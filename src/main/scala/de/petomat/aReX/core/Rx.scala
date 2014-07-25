@@ -53,10 +53,10 @@ abstract class Rx[T]( final var name: String) extends Rx.HasID {
           for {
             dyn <- dyns // TODO: this may be done in parallel because rxs with same level don't influence eachother 
             if dyn.isEnabled && (dyn.dependencies.view map (_.id) exists refreshed) // rule: a rx must be refreshed if it is enabled and if at least one dependency was refreshed. i.e. specifically if all dependencies weren't refreshed and the current rx is enabled though, it will not be refreshed.
-          } yield {
-            dyn.refreshValue
-            dyn.id
-          }
+            oldValue = dyn.value
+            newValue = { dyn.refreshValue; dyn.value }
+            if newValue != oldValue // only declare refreshed if value changed
+          } yield dyn.id
         }
         refreshing(rxsPerLevel.tail, refreshed ++ newlyRefreshed)
       }
