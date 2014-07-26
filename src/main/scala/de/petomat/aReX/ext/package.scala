@@ -24,7 +24,7 @@ package object ext {
     def trigger: Unit
   }
   object TriggerRx {
-    private final class TriggerRxImpl(private val v: Var[Nanos]) extends Dynamic[Nanos](() => v()) with TriggerRx {
+    private final class TriggerRxImpl(private val v: Var[Nanos]) extends Dynamic[Nanos]("trigger")(v()) with TriggerRx {
       def trigger: Unit = v := System.nanoTime
     }
     def create: TriggerRx = new TriggerRxImpl(Var(System.nanoTime))
