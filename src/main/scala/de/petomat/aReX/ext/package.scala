@@ -19,6 +19,17 @@ package object ext {
     }
   }
 
+  type Nanos = Long
+  trait TriggerRx extends Rx[Nanos] {
+    def trigger: Unit
+  }
+  object TriggerRx {
+    private final class TriggerRxImpl(private val v: Var[Nanos]) extends Dynamic[Nanos](() => v()) with TriggerRx {
+      def trigger: Unit = v := System.nanoTime
+    }
+    def create: TriggerRx = new TriggerRxImpl(Var(System.nanoTime))
+  }
+
   implicit class RxPimp[T](val ___rx: Rx[T]) {
     import ___rx.Obs
     def foreachPrintln: Observer[T] = ___rx foreach { t => println(s"${___rx.name} = $t") }
