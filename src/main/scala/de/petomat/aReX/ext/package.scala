@@ -1,9 +1,9 @@
-package de.petomat.aReX
+package de.petomat.arex
 import scala.language.higherKinds
 import scala.collection.breakOut
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.TreeMap
-import de.petomat.aReX.core._
+import de.petomat.arex.core._
 
 package object ext {
 

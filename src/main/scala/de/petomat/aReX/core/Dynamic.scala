@@ -1,4 +1,4 @@
-package de.petomat.aReX.core
+package de.petomat.arex.core
 import scala.collection.immutable.SortedSet
 
 class Dynamic[T](name: String = Rx.noname)(calc: => T) extends Rx[T](name) {
@@ -15,7 +15,7 @@ class Dynamic[T](name: String = Rx.noname)(calc: => T) extends Rx[T](name) {
     dependencies = dependenciesOfThis
     value
   }
-  private[aReX] final def refreshValue: Unit = value = calcValue
+  private[arex] final def refreshValue: Unit = value = calcValue
   override protected final def initial: T = calcValue
   override protected def enableRefreshingValueHook: Unit = {
     refreshValue

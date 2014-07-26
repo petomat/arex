@@ -1,4 +1,4 @@
-package de.petomat.aReX
+package de.petomat.arex
 import scala.collection.IterableView
 import scala.collection.immutable.SortedMap
 import scala.collection.immutable.SortedSet

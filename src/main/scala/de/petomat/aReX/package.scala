@@ -1,6 +1,6 @@
 package de.petomat
 
-package object aReX {
+package object arex {
 
   type Rx[T] = core.Rx[T]
   val Rx = core.Rx

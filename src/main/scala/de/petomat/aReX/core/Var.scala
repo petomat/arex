@@ -1,4 +1,4 @@
-package de.petomat.aReX.core
+package de.petomat.arex.core
 
 object Var {
   object Cookie

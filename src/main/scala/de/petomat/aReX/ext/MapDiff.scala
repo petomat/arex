@@ -1,4 +1,4 @@
-package de.petomat.aReX.ext
+package de.petomat.arex.ext
 import scala.language.higherKinds
 import scala.collection.breakOut
 import scala.collection.immutable.SortedMap

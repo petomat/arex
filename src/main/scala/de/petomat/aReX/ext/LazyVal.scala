@@ -1,4 +1,4 @@
-package de.petomat.aReX.ext
+package de.petomat.arex.ext
 
 object LazyVal {
   def apply[T](value: => T) = new LazyVal(value)

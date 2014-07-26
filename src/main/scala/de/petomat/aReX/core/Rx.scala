@@ -1,4 +1,4 @@
-package de.petomat.aReX.core
+package de.petomat.arex.core
 import scala.annotation.tailrec
 import scala.ref.WeakReference
 import scala.ref.ReferenceQueue
@@ -9,11 +9,11 @@ import scala.collection.immutable.SortedSet
 abstract class Rx[T]( final var name: String) extends Rx.HasID {
   import Rx.Types._
   type Obs = Observer[T]
-  private[aReX] final var isPropagating = true
-  private[aReX] final var isRefreshingValue = true
-  private[aReX] final var dependencies: Set[RX] = Set.empty // track dependencies to make removal of e.g. this as a dependent of a dependency of this possible
-  private[aReX] object dependents extends Rx.WeakStructure[DYN] // having weak forward references to dependents but strong backward to dependencies
-  private[aReX] object observers extends Rx.WeakStructure[Obs]
+  private[arex] final var isPropagating = true
+  private[arex] final var isRefreshingValue = true
+  private[arex] final var dependencies: Set[RX] = Set.empty // track dependencies to make removal of e.g. this as a dependent of a dependency of this possible
+  private[arex] object dependents extends Rx.WeakStructure[DYN] // having weak forward references to dependents but strong backward to dependencies
+  private[arex] object observers extends Rx.WeakStructure[Obs]
   protected final var value = initial // must be executed after dependencies otherwise NPE
   final def now: T = value
   final def apply(): T = {
@@ -100,17 +100,17 @@ object Rx {
     type Level = Int
   }
   import Types._
-  private[aReX] object Global {
+  private[arex] object Global {
     final val currentDynamicAndDeps = new DynamicVariable[Option[DYN -> SortedSet[RX]]](None) // the current evaluating Rx(Dynamic) and its (accumulated(while current Rx is evaluated)) dependencies 
   }
-  private[aReX] trait HasID {
-    private[aReX] final def id: ID = hashCode
+  private[arex] trait HasID {
+    private[arex] final def id: ID = hashCode
   }
-  private[aReX] class WeakReferenceWithID[T <: AnyRef](value: T, queue: ReferenceQueue[T], val id: ID) extends WeakReference[T](value, queue)
-  private[aReX] trait WeakStructure[X <: AnyRef with HasID] {
+  private[arex] class WeakReferenceWithID[T <: AnyRef](value: T, queue: ReferenceQueue[T], val id: ID) extends WeakReference[T](value, queue)
+  private[arex] trait WeakStructure[X <: AnyRef with HasID] {
     private final val refQueue = new ReferenceQueue[X]
     private final var perID: ID |=> WeakReferenceWithID[X] = emptySortedMap // weak reference because references to observer can be nulled out to end observing // TODO reference queue?!
-    private[aReX] final def asView: IterableView[X, _] = {
+    private[arex] final def asView: IterableView[X, _] = {
       @tailrec def queuedIDs(acc: List[ID] = List.empty): List[ID] = {
         refQueue.poll match {
           case None                              => acc
@@ -123,9 +123,9 @@ object Rx {
       // NOTE: It is possible that ids is empty but the collecting in the following line drops some garbage collected references, because they have been gc-ed but not enqueued to the refQueue yet.
       perID.values.view map (_.get) collect { case Some(rx) => rx } // intermediate map to prevent calling weakreference.get twice resulting in two different values, first Some(rx), then None : perID.values collect { case wr if wr.get.isDefined => wr.get.get }
     }
-    private[aReX] final def +(x: X): Unit = perID += x.id -> new WeakReferenceWithID(x, refQueue, x.id)
-    private[aReX] final def -(x: X): Unit = perID -= x.id
-    private[aReX] final def contains(x: X): Boolean = perID contains x.id
+    private[arex] final def +(x: X): Unit = perID += x.id -> new WeakReferenceWithID(x, refQueue, x.id)
+    private[arex] final def -(x: X): Unit = perID -= x.id
+    private[arex] final def contains(x: X): Boolean = perID contains x.id
   }
   private def dynamicsPerLevel(rxs: Iterable[DYN]): Level |=> SortedSet[DYN] = {
     def levelMapForRx(lvl: Level)(rx: DYN): DYN |-> Level = Map(rx -> lvl) ++ (rx.dependents.asView map levelMapForRx(lvl + 1) reduceOption (_ maxx _) getOrElse Map.empty) // TODO tailrec?!
@@ -133,7 +133,7 @@ object Rx {
     dynPerLevel.groupBy(_._2: Level).mapValues(_.keys.toSortedSet).toSortedMap
   }
   implicit def rxOrd[X <: RX]: Ordering[X] = Ordering by (_.id) // TODO performance: Perhaps its faster to have "implicit val rxOrdering: Ordering[RX]" and "implicit val dynOrdering: Ordering[DYN]"
-  private[aReX] def noname = "noname"
+  private[arex] def noname = "noname"
   object Cookie
   def apply[T](name: String, cookie: Cookie.type = Cookie)(calc: => T) = new Dynamic(name)(calc)
   def apply[T](calc: => T): Rx[T] = new Dynamic(name = noname)(calc)

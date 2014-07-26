@@ -1,5 +1,5 @@
-package de.petomat.aReX
-import de.petomat.aReX.ext._
+package de.petomat.arex
+import de.petomat.arex.ext._
 
 object Playground extends App {
 
