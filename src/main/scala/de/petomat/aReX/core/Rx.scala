@@ -83,8 +83,8 @@ abstract class Rx[T]( final var name: String) extends Rx.HasID {
     } obs(dyn.now)
 
   }
-  final def foreach(pf: PartialFunction[T, Unit]): Obs = this foreach { pf lift _ }
-  final def foreachSkippedInitial(pf: PartialFunction[T, Unit]): Obs = this foreachSkipInitial (pf lift _)
+  final def foreachPF(pf: PartialFunction[T, Unit]): Obs = this foreach { pf lift _ }
+  final def foreachSkipInitialPF(pf: PartialFunction[T, Unit]): Obs = this foreachSkipInitial (pf lift _)
   // to implement in subclass:
   protected def enableRefreshingValueHook: Unit
   protected def initial: T
@@ -135,6 +135,6 @@ object Rx {
   implicit def rxOrd[X <: RX]: Ordering[X] = Ordering by (_.id) // TODO performance: Perhaps its faster to have "implicit val rxOrdering: Ordering[RX]" and "implicit val dynOrdering: Ordering[DYN]"
   private[arex] def noname = "noname"
   object Cookie
-  def apply[T](name: String, cookie: Cookie.type = Cookie)(calc: => T) = new Dynamic(name)(calc)
-  def apply[T](calc: => T): Rx[T] = new Dynamic(name = noname)(calc)
+  def apply[T](name: String, cookie: Cookie.type = Cookie)(calc: => T) = new Dynamic(name, calc)
+  def apply[T](calc: => T): Rx[T] = new Dynamic(name = noname, calc)
 }

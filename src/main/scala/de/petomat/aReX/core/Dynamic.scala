@@ -1,7 +1,8 @@
 package de.petomat.arex.core
 import scala.collection.immutable.SortedSet
 
-class Dynamic[T](name: String = Rx.noname)(calc: => T) extends Rx[T](name) {
+class Dynamic[T](name: String = Rx.noname, calc: => T) extends Rx[T](name) {
+  def this(initial: T) = this(Rx.noname, initial)
   import Rx.Types._
   private def calcValue: T = {
     val (value, dependenciesOfThis) = {

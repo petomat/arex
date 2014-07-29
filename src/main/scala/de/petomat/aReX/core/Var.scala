@@ -12,6 +12,7 @@ object Var {
 }
 
 class Var[T](name: String = Rx.noname, override final val initial: T) extends Rx[T](name) {
+  def this(initial: T) = this(Rx.noname, initial)
   private final var stash: Option[T] = None
   final def :=(t: T): Unit = {
     if (isRefreshingValue) {

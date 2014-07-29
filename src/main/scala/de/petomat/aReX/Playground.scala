@@ -39,7 +39,7 @@ object Playground extends App {
     }
     set(88)
     rx1.disablePropagating
-//    rx1.disableRefreshingValue
+//    rx1.disableRefreshingValue 
     set(3)
   }
 

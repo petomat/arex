@@ -9,7 +9,7 @@ package object ext {
 
   private[ext] def ensure(b: Boolean) = require(b)
 
-  @deprecated("", "") def RxWithObs[T](rx: Rx[T])(obs: Observer[_]*): Rx[T] = new Dynamic()(rx()) { private val obs0 = obs }
+  @deprecated("", "") def RxWithObs[T](rx: Rx[T])(obs: Observer[_]*): Rx[T] = new Dynamic(rx()) { private val obs0 = obs }
 
   type RxLazy[T] = Rx[LazyVal[T]]
   def RxLazy[T](dependencies: Rx[_]*)(t: => T): RxLazy[T] = {
@@ -24,7 +24,7 @@ package object ext {
     def trigger: Unit
   }
   object TriggerRx {
-    private final class TriggerRxImpl(private val v: Var[Nanos]) extends Dynamic[Nanos]("trigger")(v()) with TriggerRx {
+    private final class TriggerRxImpl(private val v: Var[Nanos]) extends Dynamic[Nanos]("trigger", v()) with TriggerRx {
       def trigger: Unit = v := System.nanoTime
     }
     def create: TriggerRx = new TriggerRxImpl(Var(System.nanoTime))
@@ -87,7 +87,7 @@ package object ext {
   }
 
   def lastMapChangeRx[K, V](mapRx: Rx[K |-> V])(implicit ord: Ordering[K] = null): Rx[MapDiff.Diffs[K, V]] = {
-    new Var[MapDiff.Diffs[K, V]](initial = Seq.empty) {
+    new Var[MapDiff.Diffs[K, V]](Seq.empty) {
       var last = Map.empty[K, V]
       val obs = mapRx foreach { m =>
         val diffs = last diffs m
@@ -98,7 +98,7 @@ package object ext {
   }
 
   def lastSetChangeRx[T](setRx: Rx[Set[T]])(implicit ord: Ordering[T] = null): Rx[SetDiff.Diffs[T]] = {
-    new Var[SetDiff.Diffs[T]](initial = Seq.empty) {
+    new Var[SetDiff.Diffs[T]](Seq.empty) {
       var last = Set.empty[T]
       val obs = setRx foreach { s =>
         val diffs = last diffs s
@@ -109,7 +109,7 @@ package object ext {
   }
 
   def combineModelRxs[K1, K2, V1, V2, V3](model1: Rx[K1 |-> V1], model2: Rx[K2 |-> V2], default: V3): Var[(K1, K2) |-> V3] = {
-    new Var[(K1, K2) |-> V3](initial = Map.empty) {
+    new Var[(K1, K2) |-> V3](Map.empty) {
       val keysPair: Rx[Set[(K1, K2)]] = Rx { for (ap <- model1().keySet; m <- model2().keySet) yield (ap, m) }
       val obs = lastSetChangeRx(keysPair) foreach { diffs =>
         val mapDiffs: MapDiff.Diffs[(K1, K2), V3] = diffs map {
