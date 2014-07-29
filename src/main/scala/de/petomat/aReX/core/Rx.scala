@@ -6,14 +6,14 @@ import scala.util.DynamicVariable
 import scala.collection.IterableView
 import scala.collection.immutable.SortedSet
 
-abstract class Rx[T]( final var name: String) extends Rx.HasID {
+abstract class Rx[T](final var name: String) extends Rx.HasID {
   import Rx.Types._
   private[arex] final var isPropagating = true
   private[arex] final var isRefreshingValue = true
   private[arex] final var dependencies: Set[RX] = Set.empty // track dependencies to make removal of e.g. this as a dependent of a dependency of this possible
   private[arex] object dependents extends Rx.WeakStructure[DYN] // having weak forward references to dependents but strong backward to dependencies
   private[arex] object observers extends Rx.WeakStructure[Observer]
-  protected final var value = initial // must be executed after dependencies otherwise NPE
+  protected final var value: T = initial // must be executed after dependencies otherwise NPE
   final def now: T = value
   final def apply(): T = {
     Rx.Global.currentDynamicAndDeps.value = {
