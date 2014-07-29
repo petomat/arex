@@ -8,12 +8,11 @@ import scala.collection.immutable.SortedSet
 
 abstract class Rx[T]( final var name: String) extends Rx.HasID {
   import Rx.Types._
-  type Obs = Observer[T]
   private[arex] final var isPropagating = true
   private[arex] final var isRefreshingValue = true
   private[arex] final var dependencies: Set[RX] = Set.empty // track dependencies to make removal of e.g. this as a dependent of a dependency of this possible
   private[arex] object dependents extends Rx.WeakStructure[DYN] // having weak forward references to dependents but strong backward to dependencies
-  private[arex] object observers extends Rx.WeakStructure[Obs]
+  private[arex] object observers extends Rx.WeakStructure[Observer]
   protected final var value = initial // must be executed after dependencies otherwise NPE
   final def now: T = value
   final def apply(): T = {
@@ -27,16 +26,18 @@ abstract class Rx[T]( final var name: String) extends Rx.HasID {
     value
   }
   final def name_(s: String): Unit = {}
-  final def foreach(f: T => Unit): Obs = {
+  final def foreach(f: T => Unit): Observer = {
     val obs = foreachSkipInitial(f)
     obs(this.now)
     obs
   }
-  final def foreachSkipInitial(f: T => Unit): Obs = {
-    val obs = new Observer(f)
+  final def foreachSkipInitial(f: T => Unit): Observer = {
+    val obs = Observer(f)
     observers + obs
     obs
   }
+  final def foreachPF(pf: PartialFunction[T, Unit]): Observer = this foreach { pf lift _ }
+  final def foreachSkipInitialPF(pf: PartialFunction[T, Unit]): Observer = this foreachSkipInitial (pf lift _)
   final def enablePropagating: Unit = {
     if (!isPropagating) {
       isPropagating = true
@@ -83,8 +84,6 @@ abstract class Rx[T]( final var name: String) extends Rx.HasID {
     } obs(dyn.now)
 
   }
-  final def foreachPF(pf: PartialFunction[T, Unit]): Obs = this foreach { pf lift _ }
-  final def foreachSkipInitialPF(pf: PartialFunction[T, Unit]): Obs = this foreachSkipInitial (pf lift _)
   // to implement in subclass:
   protected def enableRefreshingValueHook: Unit
   protected def initial: T

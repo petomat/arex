@@ -9,7 +9,7 @@ package object ext {
 
   private[ext] def ensure(b: Boolean) = require(b)
 
-  @deprecated("", "") def RxWithObs[T](rx: Rx[T])(obs: Observer[_]*): Rx[T] = new Dynamic(rx()) { private val obs0 = obs }
+  @deprecated("", "") def RxWithObs[T](rx: Rx[T])(obs: Observer*): Rx[T] = new Dynamic(rx()) { private val obs0 = obs }
 
   type RxLazy[T] = Rx[LazyVal[T]]
   def RxLazy[T](dependencies: Rx[_]*)(t: => T): RxLazy[T] = {
@@ -31,10 +31,9 @@ package object ext {
   }
 
   implicit class RxPimp[T](val ___rx: Rx[T]) {
-    import ___rx.Obs
-    def foreachPrintln: Observer[T] = ___rx foreach { t => println(s"${___rx.name} = $t") }
-    def foreachTrue(f: => Unit)(implicit ev: T <:< Boolean): Obs = ___rx foreach { t => if (t) f }
-    def foreachFalse(f: => Unit)(implicit ev: T <:< Boolean): Obs = ___rx foreach { t => if (!t) f }
+    def foreachPrintln: Observer = ___rx foreach { t => println(s"${___rx.name} = $t") }
+    def foreachTrue(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (t) f }
+    def foreachFalse(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (!t) f }
     def collect[R](pf: PartialFunction[T, R]): Rx[R] = this filter pf.isDefinedAt map pf
     def map[R](f: T => R): Rx[R] = Rx(name = ___rx.name + " mapped") { f(___rx()) }
     def filter(p: T => Boolean): Rx[T] = {

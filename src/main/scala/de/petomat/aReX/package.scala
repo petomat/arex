@@ -8,6 +8,6 @@ package object arex {
   type Var[T] = core.Var[T]
   val Var = core.Var
 
-  type Observer[T] = core.Observer[T]
+  type Observer = core.Observer
 
 }

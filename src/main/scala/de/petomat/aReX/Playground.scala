@@ -10,7 +10,7 @@ object Playground extends App {
     println("=" * x)
   }
 
-  def foreachPrintln(rxs: Rx[_]*): Seq[Observer[_]] = rxs.map(_.foreachPrintln)
+  def foreachPrintln(rxs: Rx[_]*): Seq[Observer] = rxs.map(_.foreachPrintln)
 
   final def microBench[T](name: String)(t: => T): T = {
     val start = System.nanoTime
