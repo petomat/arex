@@ -77,6 +77,7 @@ package object ext {
   implicit class SetPimpForDiff[T, S[T] <: Set[T]](val ___set: S[T]) extends AnyVal {
     final def diffs(newOne: Set[T]): SetDiff.Diffs[T] = {
       def asMap[S[T] <: Set[T]](set: S[T]): Map[T, Unit] = set.map(_ -> {})(breakOut)
+      // TODO : ___set diffs newOne map { ... }
       asMap(___set) diffs asMap(newOne) map {
         case MapDiff.Create(t, _)    => SetDiff.Create(t)
         case MapDiff.Delete(t, _)    => SetDiff.Delete(t)
