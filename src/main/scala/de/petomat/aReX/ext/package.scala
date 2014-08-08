@@ -31,7 +31,7 @@ package object ext {
   }
 
   implicit class RxPimp[T](val ___rx: Rx[T]) {
-    def foreachPrintln: Observer = ___rx foreach { t => println(s"${___rx.name} = $t") }
+    def foreachPrintln(desc: String = null): Observer = ___rx foreach { t => println(s"${___rx.name + Option(desc).map("-" + _).getOrElse("")} = $t") }
     def foreachTrue(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (t) f }
     def foreachFalse(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (!t) f }
     def collect[R](pf: PartialFunction[T, R]): Rx[R] = this filter pf.isDefinedAt map pf
@@ -39,7 +39,7 @@ package object ext {
     def filter(p: T => Boolean): Rx[T] = {
       var last = ___rx.now
       Rx(name = ___rx.name + " filtered") {
-        println("fi " + p(___rx()))
+        // println("fi " + p(___rx()))
         if (p(___rx())) last = ___rx.now
         last
       }

@@ -3,7 +3,7 @@ package de.petomat.arex.core
 object Var {
   object Cookie
   def apply[T](initial: T): Var[T] = new Var(name = Rx.noname, initial)
-  def apply[T](name: String, cookie: Cookie.type = Cookie)(initial: T) = new Var(name, initial)
+  def apply[T](name: String, cookie: Cookie.type = Cookie)(initial: T): Var[T] = new Var(name, initial)
   def apply[T](rx: Rx[T]): Var[T] = {
     new Var(name = Rx.noname, rx.now) {
       val obs = rx foreachSkipInitial this.refresh

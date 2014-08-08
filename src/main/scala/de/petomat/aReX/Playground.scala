@@ -10,7 +10,7 @@ object Playground extends App {
     println("=" * x)
   }
 
-  def foreachPrintln(rxs: Rx[_]*): Seq[Observer] = rxs.map(_.foreachPrintln)
+  def foreachPrintln(rxs: Rx[_]*): Seq[Observer] = rxs.map(_.foreachPrintln())
 
   final def microBench[T](name: String)(t: => T): T = {
     val start = System.nanoTime
@@ -27,23 +27,31 @@ object Playground extends App {
 
   // -------------------------------------------
 
+  //  locally {
+  //    object V {
+  //      def apply[T](t: T): Unit = {}
+  //      def apply[T](o: Option[T]): Unit = {}
+  //    }
+  //    val v1 = V.apply[Set[Int]](Set.empty[Int])
+  //    val v2 = V.apply[Map[Int, String]](Map.empty[Int, String])
+  //  }
+
   locally {
     val vr = Var(name = "vr")(0)
     val rx1 = Rx(name = "rx1") { println("refreshing value RX1"); vr() < 10 }
     val rx2 = Rx(name = "rx2") { println("refreshing value RX2"); s"'${rx1()}'" }
     val rx3 = Rx(name = "rx3") { println("refreshing value RX3"); !rx1() }
-    foreachPrintln(vr, rx1, rx2,rx3)
+    foreachPrintln(vr, rx1, rx2, rx3)
     def set(i: Int) {
       println(s"SETTING vr := $i")
       vr := i
     }
     set(88)
     rx1.disablePropagating
-//    rx1.disableRefreshingValue 
+    //    rx1.disableRefreshingValue 
     set(3)
   }
 
-  
   //  locally {
   //    val vr = Var(name = "vr")(0)
   //    val rx1 = Rx(name = "rx1") { println("RX1"); vr() < 10 }

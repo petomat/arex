@@ -2,10 +2,10 @@ package de.petomat.arex.core
 import scala.ref.WeakReference
 
 object Observer {
-  def apply[T](rx: Rx[T], f: T => Unit): Observer = new Observer(new WeakReference(rx), { a => f(a.asInstanceOf[T]) })
+  def apply[T](rx: Rx[T], f: T => Unit): Observer = new Observer(rx, { a => f(a.asInstanceOf[T]) })
 }
 
-class Observer(val rx: WeakReference[Rx.Types.RX], val f: Any => Unit) extends (Any => Unit) with Rx.HasID { // Any because we don't use HLists for collections of Rx[T], which would be a performance penalty // Must be instance of AnyRef due to WeakReferences
+class Observer(val rx: Rx.Types.RX, val f: Any => Unit) extends (Any => Unit) with Rx.HasID { // Any because we don't use HLists for collections of Rx[T], which would be a performance penalty // Must be instance of AnyRef due to WeakReferences
   private var alive = true
   final def apply(a: Any): Unit = {
     require(alive)
@@ -13,7 +13,7 @@ class Observer(val rx: WeakReference[Rx.Types.RX], val f: Any => Unit) extends (
   }
   final def kill: Unit = {
     alive = false
-    rx.get foreach { _.observers - this }
+    rx.observers - this
   }
 }
 
