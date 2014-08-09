@@ -31,6 +31,7 @@ package object ext {
   }
 
   implicit class RxPimp[T](val ___rx: Rx[T]) {
+    def foreachPrintln: Observer = foreachPrintln()
     def foreachPrintln(desc: String = null): Observer = ___rx foreach { t => println(s"${___rx.name + Option(desc).map("-" + _).getOrElse("")} = $t") }
     def foreachTrue(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (t) f }
     def foreachFalse(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (!t) f }

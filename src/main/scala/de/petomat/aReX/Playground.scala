@@ -37,7 +37,7 @@ object Playground extends App {
   //  }
 
   locally {
-    val vr = Var(name = "vr")(0)
+    val vr = Var(0) named "vr"
     val rx1 = Rx(name = "rx1") { println("refreshing value RX1"); vr() < 10 }
     val rx2 = Rx(name = "rx2") { println("refreshing value RX2"); s"'${rx1()}'" }
     val rx3 = Rx(name = "rx3") { println("refreshing value RX3"); !rx1() }

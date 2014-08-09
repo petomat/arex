@@ -26,7 +26,7 @@ abstract class Rx[T](private var name0: String) extends Rx.HasID {
     value
   }
   final def name: String = name0
-  final def name(s: String): this.type = { name0 = s; this }
+  final def named(s: String): this.type = { name0 = s; this }
   final def foreach(f: T => Unit): Observer = {
     val obs = foreachSkipInitial(f)
     obs(this.now)
