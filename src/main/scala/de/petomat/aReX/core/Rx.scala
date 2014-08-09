@@ -6,7 +6,7 @@ import scala.util.DynamicVariable
 import scala.collection.IterableView
 import scala.collection.immutable.SortedSet
 
-abstract class Rx[T]( final var name: String) extends Rx.HasID {
+abstract class Rx[T](private var name0: String) extends Rx.HasID {
   import Rx.Types._
   private[arex] final var isPropagating = true
   private[arex] final var isRefreshingValue = true
@@ -25,7 +25,8 @@ abstract class Rx[T]( final var name: String) extends Rx.HasID {
     }
     value
   }
-  final def name_(s: String): Unit = {}
+  final def name: String = name0
+  final def name(s: String): this.type = { name0 = s; this }
   final def foreach(f: T => Unit): Observer = {
     val obs = foreachSkipInitial(f)
     obs(this.now)
