@@ -6,7 +6,7 @@ object Observer {
 }
 
 class Observer(val rx: Rx.Types.RX, val f: Any => Unit) extends (Any => Unit) with Rx.HasID { // Any because we don't use HLists for collections of Rx[T], which would be a performance penalty // Must be instance of AnyRef due to WeakReferences
-  private var alive = true
+  private var alive = true // TODO only for debug
   final def apply(a: Any): Unit = {
     require(alive)
     f(a)
@@ -15,5 +15,11 @@ class Observer(val rx: Rx.Types.RX, val f: Any => Unit) extends (Any => Unit) wi
     alive = false
     rx.observers - this
   }
+  final def name: String = s"${rx.name}-Observer"
 }
 
+//class Observer(val rx: Rx.Types.RX, val f: Any => Unit) extends (Any => Unit) with Rx.HasID { // Any because we don't use HLists for collections of Rx[T], which would be a performance penalty // Must be instance of AnyRef due to WeakReferences
+//  final def apply(a: Any): Unit = f(a)
+//  final def kill: Unit = rx.observers - this
+//  final def name: String = s"${rx.name}-Observer"
+//}
