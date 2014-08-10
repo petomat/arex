@@ -16,7 +16,7 @@ package object ext {
     Rx {
       dependencies foreach { _() } // establish dependencies
       LazyVal(t)
-    }
+    } named "lazy"
   }
 
   type Nanos = Long
@@ -24,10 +24,11 @@ package object ext {
     def trigger: Unit
   }
   object TriggerRx {
-    private final class TriggerRxImpl(private val v: Var[Nanos]) extends Dynamic[Nanos]("trigger", v()) with TriggerRx {
+    private var nr = 0  // TODO not thread safe
+    private final class TriggerRxImpl(private val v: Var[Nanos]) extends Dynamic[Nanos](v()) with TriggerRx {
       def trigger: Unit = v := System.nanoTime
     }
-    def create: TriggerRx = new TriggerRxImpl(Var(System.nanoTime))
+    def create: TriggerRx = new TriggerRxImpl(Var(System.nanoTime)) named { nr += 1 ; s"trigger[$nr]"}
   }
 
   implicit class RxPimp[T](val ___rx: Rx[T]) {
@@ -36,14 +37,14 @@ package object ext {
     def foreachTrue(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (t) f }
     def foreachFalse(f: => Unit)(implicit ev: T <:< Boolean): Observer = ___rx foreach { t => if (!t) f }
     def collect[R](pf: PartialFunction[T, R]): Rx[R] = this filter pf.isDefinedAt map pf
-    def map[R](f: T => R): Rx[R] = Rx(name = ___rx.name + " mapped") { f(___rx()) }
+    def map[R](f: T => R): Rx[R] = Rx{ f(___rx()) }named (___rx.name + "-mapped")
     def filter(p: T => Boolean): Rx[T] = {
       var last = ___rx.now
-      Rx(name = ___rx.name + " filtered") {
+      Rx {
         // println("fi " + p(___rx()))
         if (p(___rx())) last = ___rx.now
         last
-      }
+      } named (___rx.name + "-filtered")
     }
   }
 
@@ -95,7 +96,7 @@ package object ext {
         if (ord == null) this := diffs else this := diffs.toSeq sortBy (_.key)
         last = m
       }
-    }
+    } named ("lastMapChange@" + mapRx.name)
   }
 
   def lastSetChangeRx[T](setRx: Rx[Set[T]])(implicit ord: Ordering[T] = null): Rx[SetDiff.Diffs[T]] = {
@@ -106,7 +107,7 @@ package object ext {
         if (ord == null) this := diffs else this := diffs.toSeq sortBy (_.elem)
         last = s
       }
-    }
+    } named ("lastSetChange@" + setRx.name)
   }
 
   def combineModelRxs[K1, K2, V1, V2, V3](model1: Rx[K1 |-> V1], model2: Rx[K2 |-> V2], default: V3): Var[(K1, K2) |-> V3] = {
@@ -119,7 +120,7 @@ package object ext {
         }
         this := mapDiffs(this.now)
       }
-    }
+    } named s"combineModel@${model1.name}&${model2.name}"
   }
 
 }

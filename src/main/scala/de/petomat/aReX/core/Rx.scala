@@ -16,14 +16,13 @@ abstract class Rx[T](private var name0: String) extends Rx.HasID {
   protected final var value: T = initial // must be executed after dependencies otherwise NPE
   final def now: T = value
   final def apply(): T = {
-    Rx.Global.currentDynamicAndDeps.value = {
-      Rx.Global.currentDynamicAndDeps.value map {
-        case (dyn, dependencies) =>
-          if (!dependents.contains(dyn)) dependents + dyn // establish caller as dependent of this callee
-          dyn -> (dependencies + this) // register sibling as dependency of caller
-      }
+    Rx.Global.currentDynamicAndDeps.value match {
+      case None => value
+      case Some((dyn, dependencies)) =>
+        if (!dependents.contains(dyn)) dependents + dyn // establish caller as dependent of this callee
+        Rx.Global.currentDynamicAndDeps.value = Some(dyn -> (dependencies + this)) // register sibling as dependency of caller
+        value
     }
-    value
   }
   final def name: String = name0
   final def named(s: String): this.type = { name0 = s; this }
