@@ -38,13 +38,18 @@ abstract class Rx[T](private var name0: String) extends Rx.HasID {
   }
   final def foreachPF(pf: PartialFunction[T, Unit]): Observer = this foreach { pf lift _ }
   final def foreachSkipInitialPF(pf: PartialFunction[T, Unit]): Observer = this foreachSkipInitial (pf lift _)
+  private var valueBeforeDisablePropagating: Option[T] = None
   final def enablePropagating: Unit = {
     if (!isPropagating) {
       isPropagating = true
-      propagate
+      if (valueBeforeDisablePropagating.get != value) propagate // only propagate if value changed since disable propagating
+      valueBeforeDisablePropagating = None
     }
   }
-  final def disablePropagating: Unit = isPropagating = false
+  final def disablePropagating: Unit = {
+    valueBeforeDisablePropagating = Some(value)
+    isPropagating = false
+  }
   final def enableRefreshingValue: Unit = {
     if (!isRefreshingValue) {
       isRefreshingValue = true
