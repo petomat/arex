@@ -47,7 +47,7 @@ object Playground extends App {
       vr := i
     }
     set(88)
-    rx1.disablePropagating
+    rx1.disablePropagating()
     //    rx1.disableRefreshingValue 
     set(3)
   }

@@ -25,7 +25,7 @@ class Var[T](name: String = Rx.noname, override final val initial: T) extends Rx
     }
   }
   @inline final def refresh(t: T): Unit = :=(t) // to use it as a function parameter, e.g.: val obs = rx foreach vr.refresh
-  override protected def enableRefreshingValueHook: Unit = {
+  override protected def enableRefreshingValueHook(): Unit = {
     stash foreach refresh
     stash = None
     if (isPropagating) propagate

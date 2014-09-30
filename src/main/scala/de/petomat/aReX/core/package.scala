@@ -12,7 +12,7 @@ package object core {
   type |=>[K, V] = SortedMap[K, V]
 
   implicit class MapPimpForMaxx[X](val m1: X |-> Int) extends AnyVal {
-    final def maxx(m2: X |-> Int): X |-> Int = { // this can be done with a library, e.g. scalaz, but this library should be dependency-free 
+    final def maxValue(m2: X |-> Int): X |-> Int = { // this can be done with a library, e.g. scalaz, but this library should be dependency-free 
       ((m1.keySet ++ m2.keySet).view.map { dep =>
         dep -> {
           (m1 get dep, m2 get dep) match {

@@ -16,10 +16,10 @@ class Dynamic[T](name: String = Rx.noname, calc: => T) extends Rx[T](name) {
     dependencies = dependenciesOfThis
     value
   }
-  private[arex] final def refreshValue: Unit = value = calcValue
+  private[arex] final def refreshValue(): Unit = value = calcValue
   override protected final def initial: T = calcValue
-  override protected def enableRefreshingValueHook: Unit = {
+  override protected def enableRefreshingValueHook(): Unit = {
     refreshValue
-    if (isPropagating) propagate
+    if (isPropagating) propagate()
   }
 }
