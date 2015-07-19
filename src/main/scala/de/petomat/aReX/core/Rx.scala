@@ -58,18 +58,14 @@ abstract class Rx[T](private var name0: String) extends Rx.HasID {
   }
   final def disableRefreshingValue(): Unit = isRefreshingValue = false
   final override def toString = s"$name[${dependencies.map(_.name).mkString(",")}|${dependents.asView.map(_.name).mkString(",")}]"
-  protected final def propagate(): Unit = {
+  protected final def propagate(): Unit = propagateSeq()
+  private final def propagateSeq(): Unit = {
     // assumes that this rx was already refreshed, either by Var.:=(...) or Dynamic.refresh
     // refresh all depentends in proper order, thats why SortedSet[DYN] is used
-    def dynamicsPerLevel(rxs: Iterable[DYN]): Level |=> SortedSet[DYN] = {
-      def levelMapForRx(lvl: Level)(rx: DYN): DYN |-> Level = Map(rx -> lvl) ++ (rx.dependents.asView map levelMapForRx(lvl + 1) reduceOption (_ maxValue _) getOrElse Map.empty) // TODO tailrec?!
-      val dynPerLevel: DYN |-> Level = rxs map levelMapForRx(1: Level) reduceOption (_ maxValue _) getOrElse Map.empty
-      dynPerLevel.groupBy(_._2: Level).mapValues(_.keys.toSortedSet).toSortedMap
-    }
     @tailrec def refreshing(rxsPerLevel: Level |=> SortedSet[DYN], refreshed: Set[ID]): Set[ID] = { // memorize refreshed ones to determine which follow-ups have to be refreshed
       if (rxsPerLevel.isEmpty) refreshed
       else {
-        val (_: Level, dyns) = rxsPerLevel.head
+        val (_: Level, dyns) = rxsPerLevel.head // performance?: val dyns = rxsPerLevel.head._2
         val newlyRefreshed = {
           for {
             dyn <- dyns // TODO: this may be done in parallel because rxs with same level don't influence eachother
@@ -83,7 +79,7 @@ abstract class Rx[T](private var name0: String) extends Rx.HasID {
         refreshing(rxsPerLevel.tail, refreshed ++ newlyRefreshed)
       }
     }
-    val dynsPerLevel: Level |=> SortedSet[DYN] = dynamicsPerLevel(dependents.asView)
+    val dynsPerLevel: Level |=> SortedSet[DYN] = Rx.dynamicsPerLevel(this.dependents.asView)
     val refreshed: Set[ID] = refreshing(dynsPerLevel, Set(this.id))
     // after refreshing RXs, execute all own observers and observers of dependents of this
     for (obs <- observers.asView) obs(this.now)
@@ -94,9 +90,31 @@ abstract class Rx[T](private var name0: String) extends Rx.HasID {
       obs <- dyn.observers.asView
     } obs(dyn.now)
   }
-  protected final def propagatePar(): Unit = {
-
-    ???
+  private final def propagatePar(): Unit = {
+    // assumes that this rx was already refreshed, either by Var.:=(...) or Dynamic.refresh
+    import scala.concurrent._
+    import scala.concurrent.ExecutionContext.Implicits.global
+    import scala.concurrent.duration.Duration
+    type Refreshed = Boolean
+    var refreshingFuturePerRX: RX |-> Future[Refreshed] = Map(this -> Future.successful(true: Refreshed))
+    @tailrec def createRefreshingFutures(rxsPerLevel: Level |=> SortedSet[DYN]): Unit = {
+      if (rxsPerLevel.isEmpty) Unit
+      else {
+        val (_: Level, dyns) = rxsPerLevel.head // performance?: val dyns = rxsPerLevel.head._2
+        for (dyn <- dyns) {
+          refreshingFuturePerRX += dyn ->
+            Future.sequence(dyn.dependencies map refreshingFuturePerRX).map[Refreshed] { _ =>
+              val oldValue = dyn.value
+              dyn.refreshValue()
+              (oldValue != dyn.value): Refreshed
+            }
+        }
+        createRefreshingFutures(rxsPerLevel.tail)
+      }
+    }
+    val dynsPerLevel: Level |=> SortedSet[DYN] = Rx.dynamicsPerLevel(this.dependents.asView)
+    createRefreshingFutures(dynsPerLevel)
+    Await.ready(Future.sequence(refreshingFuturePerRX.values), Duration.Inf)
   }
   // to implement in subclass:
   protected def enableRefreshingValueHook(): Unit
@@ -140,6 +158,12 @@ object Rx {
     private[arex] final def -(x: X): Unit = perID -= x.id
     private[arex] final def contains(x: X): Boolean = perID contains x.id
   }
+  private[Rx] def dynamicsPerLevel(rxs: Iterable[DYN]): Level |=> SortedSet[DYN] = {
+    def levelMapForRx(lvl: Level)(rx: DYN): DYN |-> Level = Map(rx -> lvl) ++ (rx.dependents.asView map levelMapForRx(lvl + 1) reduceOption (_ maxValue _) getOrElse Map.empty) // TODO tailrec?!
+    val dynPerLevel: DYN |-> Level = rxs map levelMapForRx(1: Level) reduceOption (_ maxValue _) getOrElse Map.empty
+    dynPerLevel.groupBy(_._2: Level).mapValues(_.keys.toSortedSet).toSortedMap
+  }
+
   implicit def rxOrd[X <: RX]: Ordering[X] = Ordering by (_.id) // TODO performance: Perhaps its faster to have "implicit val rxOrdering: Ordering[RX]" and "implicit val dynOrdering: Ordering[DYN]"
   private[arex] def noname = "noname"
   object Cookie

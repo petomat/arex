@@ -1,5 +1,7 @@
 *.class
 *.log
+amend*
+st*
 
 # sbt specific
 dist/*
@@ -17,3 +19,4 @@ project/plugins/project/
 .classpath
 .cache
 .settings
+/bin/
